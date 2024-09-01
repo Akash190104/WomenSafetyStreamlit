@@ -4,3 +4,4 @@ numpy==1.23.5
 ultralytics==8.0.100
 mediapipe==0.9.3.0
 geocoder==1.38.1
+disutils
