@@ -1,7 +1,5 @@
-
 opencv-python
 numpy
 ultralytics
 mediapipe
 geocoder
-setuptools
