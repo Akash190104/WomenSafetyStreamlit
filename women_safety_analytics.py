@@ -3,7 +3,6 @@ import cv2
 import numpy as np
 from ultralytics import YOLO
 import mediapipe as mp
-import time
 import geocoder
 from datetime import datetime
 
@@ -160,9 +159,13 @@ def count_draw_and_detect(frame, detections, previous_hand_landmarks):
             punch_count += 1
             cv2.putText(frame, 'Punch Detected', (10, 330), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 0, 255), 2)
     
-    # Draw face and hand landmarks
+        # Draw face and hand landmarks
     if hand_results.multi_hand_landmarks or face_results.multi_face_landmarks:
-        draw_landmarks(frame, hand_results.multi_hand_landmarks, face_results.multi_face_landmarks[0] if face_results.multi_face_landmarks else None)
+        draw_landmarks(
+            frame, 
+            hand_results.multi_hand_landmarks, 
+            face_results.multi_face_landmarks[0] if face_results.multi_face_landmarks else None
+        )
 
     for detection in detections:
         class_id = int(detection[5])  # Extract the class ID
@@ -202,11 +205,11 @@ def main():
     warning_placeholder = st.empty()
 
     # Initialize the video capture object
-    cap = cv2.VideoCapture(0)
+    cap = cv2.VideoCapture(0)  # Change this to an uploaded video or sample video path if on Streamlit Cloud
     
     previous_hand_landmarks = None
     
-    while True:
+    while cap.isOpened():
         ret, frame = cap.read()
         if not ret:
             st.error("Failed to capture frame from camera")
@@ -215,7 +218,9 @@ def main():
         results = model(frame)
         detections = results[0].boxes.data.cpu().numpy()
 
-        men_count, women_count, thumbs_up_count, push_count, punch_count, current_hand_landmarks = count_draw_and_detect(frame, detections, previous_hand_landmarks)
+        men_count, women_count, thumbs_up_count, push_count, punch_count, current_hand_landmarks = count_draw_and_detect(
+            frame, detections, previous_hand_landmarks
+        )
 
         # Update the counts
         men_count_placeholder.text(f'Men: {men_count}')
@@ -242,3 +247,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
