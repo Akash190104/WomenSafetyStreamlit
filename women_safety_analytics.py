@@ -6,8 +6,6 @@ import mediapipe as mp
 import time
 import geocoder
 from datetime import datetime
-from streamlit_webrtc import webrtc_streamer, VideoProcessorBase, RTCConfiguration
-import av
 
 # Load the YOLOv8 model pre-trained on the COCO dataset
 @st.cache_resource
@@ -187,54 +185,48 @@ def count_draw_and_detect(frame, detections, previous_hand_landmarks):
 
     return men_count, women_count, thumbs_up_count, push_count, punch_count, hand_results.multi_hand_landmarks
 
-class VideoProcessor(VideoProcessorBase):
-    def __init__(self):
-        self.model = model
-        self.previous_hand_landmarks = None
-        self.men_count = 0
-        self.women_count = 0
-        self.thumbs_up_count = 0
-        self.push_count = 0
-        self.punch_count = 0
-
-    def recv(self, frame):
-        img = frame.to_ndarray(format="bgr24")
-        
-        results = self.model(img)
-        detections = results[0].boxes.data.cpu().numpy()
-
-        self.men_count, self.women_count, self.thumbs_up_count, self.push_count, self.punch_count, current_hand_landmarks = count_draw_and_detect(img, detections, self.previous_hand_landmarks)
-        
-        # Draw text on image
-        cv2.putText(img, f'Men: {self.men_count}', (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
-        cv2.putText(img, f'Women: {self.women_count}', (10, 60), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
-        cv2.putText(img, f'SOS: {self.thumbs_up_count}', (10, 90), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
-        cv2.putText(img, f'Push: {self.push_count}', (10, 120), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
-        cv2.putText(img, f'Punch: {self.punch_count}', (10, 150), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
-
-        self.previous_hand_landmarks = current_hand_landmarks
-
-        return av.VideoFrame.from_ndarray(img, format="bgr24")
-
 def main():
     st.title("Real-time Camera Monitoring")
     
-    rtc_configuration = RTCConfiguration(
-        {"iceServers": [{"urls": ["stun:stun.l.google.com:19302"]}]}
-    )
-    
-    webrtc_ctx = webrtc_streamer(
-        key="example",
-        video_processor_factory=VideoProcessor,
-        rtc_configuration=rtc_configuration,
-        media_stream_constraints={"video": True, "audio": False},
-    )
+    # Create placeholders for the video feed and counts
+    video_placeholder = st.empty()
+    count_placeholder = st.empty()
+    warning_placeholder = st.empty()
 
-    if webrtc_ctx.video_processor:
-        if webrtc_ctx.video_processor.men_count >= 3 and webrtc_ctx.video_processor.women_count == 1:
-            st.warning("Dangerous Situation")
-        elif webrtc_ctx.video_processor.men_count >= 5 and webrtc_ctx.video_processor.women_count == 1:
-            st.error("SOS Situation")
+    # Initialize the video capture object
+    cap = cv2.VideoCapture(0)
+    
+    previous_hand_landmarks = None
+    
+    while True:
+        ret, frame = cap.read()
+        if not ret:
+            st.error("Failed to capture frame from camera")
+            break
+
+        results = model(frame)
+        detections = results[0].boxes.data.cpu().numpy()
+
+        men_count, women_count, thumbs_up_count, push_count, punch_count, current_hand_landmarks = count_draw_and_detect(frame, detections, previous_hand_landmarks)
+
+        # Update the counts
+        count_placeholder.text(f'Men: {men_count}, Women: {women_count}, SOS: {thumbs_up_count}, Push: {push_count}, Punch: {punch_count}')
+
+        # Check for dangerous situations
+        if men_count >= 3 and women_count == 1:
+            warning_placeholder.warning("Dangerous Situation")
+        elif men_count >= 5 and women_count == 1:
+            warning_placeholder.error("SOS Situation")
+        else:
+            warning_placeholder.empty()
+
+        # Display the frame
+        video_placeholder.image(frame, channels="BGR")
+
+        # Update previous landmarks
+        previous_hand_landmarks = current_hand_landmarks
+
+    cap.release()
 
 if __name__ == "__main__":
     main()
