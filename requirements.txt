@@ -4,4 +4,3 @@ ultralytics
 mediapipe
 geocoder
 streamlit-webrtc
-pyopengl
