@@ -188,9 +188,17 @@ def count_draw_and_detect(frame, detections, previous_hand_landmarks):
 def main():
     st.title("Real-time Camera Monitoring")
     
-    # Create placeholders for the video feed and counts
+    # Create a placeholder for the video feed
     video_placeholder = st.empty()
-    count_placeholder = st.empty()
+    
+    # Create placeholders for the counts
+    men_count_placeholder = st.empty()
+    women_count_placeholder = st.empty()
+    sos_count_placeholder = st.empty()
+    push_count_placeholder = st.empty()
+    punch_count_placeholder = st.empty()
+    
+    # Create a placeholder for warnings
     warning_placeholder = st.empty()
 
     # Initialize the video capture object
@@ -210,7 +218,11 @@ def main():
         men_count, women_count, thumbs_up_count, push_count, punch_count, current_hand_landmarks = count_draw_and_detect(frame, detections, previous_hand_landmarks)
 
         # Update the counts
-        count_placeholder.text(f'Men: {men_count}, Women: {women_count}, SOS: {thumbs_up_count}, Push: {push_count}, Punch: {punch_count}')
+        men_count_placeholder.text(f'Men: {men_count}')
+        women_count_placeholder.text(f'Women: {women_count}')
+        sos_count_placeholder.text(f'SOS: {thumbs_up_count}')
+        push_count_placeholder.text(f'Push: {push_count}')
+        punch_count_placeholder.text(f'Punch: {punch_count}')
 
         # Check for dangerous situations
         if men_count >= 3 and women_count == 1:
